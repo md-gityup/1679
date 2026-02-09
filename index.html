@@ -68,13 +68,6 @@
             letter-spacing: -2px;
         }
 
-        .subtitle {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            font-weight: 400;
-            letter-spacing: 0.5px;
-        }
-
         .toolbar {
             max-width: 1600px;
             margin: 0 auto 3rem auto;
@@ -470,6 +463,12 @@
             font-weight: 400;
         }
 
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 2.5rem;
@@ -504,10 +503,7 @@
     </div>
 
     <div class="board-container" id="boardContainer">
-        <div class="empty-state">
-            <div class="empty-state-icon">✨</div>
-            <p class="empty-state-text">Start building your vision board by adding images, links, and documents</p>
-        </div>
+        <div class="loading">Loading board...</div>
     </div>
 
     <!-- Image Modal -->
@@ -538,7 +534,7 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('imageModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add to Board</button>
+                    <button type="submit" class="btn btn-primary"><span>Add to Board</span></button>
                 </div>
             </form>
         </div>
@@ -567,7 +563,7 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('linkModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add to Board</button>
+                    <button type="submit" class="btn btn-primary"><span>Add to Board</span></button>
                 </div>
             </form>
         </div>
@@ -596,26 +592,63 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('documentModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add to Board</button>
+                    <button type="submit" class="btn btn-primary"><span>Add to Board</span></button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAu2CwtCqWNgV_oCKoBW64TgFDeukW_C10",
+            authDomain: "project-361256138620557374.firebaseapp.com",
+            projectId: "project-361256138620557374",
+            storageBucket: "project-361256138620557374.firebasestorage.app",
+            messagingSenderId: "686762689631",
+            appId: "1:686762689631:web:4f6ee23ffd46451146c7ea"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        // Make functions globally available
+        window.db = db;
+        window.storage = storage;
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.deleteDoc = deleteDoc;
+        window.doc = doc;
+        window.ref = ref;
+        window.uploadBytes = uploadBytes;
+        window.getDownloadURL = getDownloadURL;
+
+        // Real-time listener for board items
+        const q = query(collection(db, 'boardItems'), orderBy('createdAt', 'desc'));
+        onSnapshot(q, (snapshot) => {
+            const items = [];
+            snapshot.forEach((doc) => {
+                items.push({ id: doc.id, ...doc.data() });
+            });
+            window.renderBoard(items);
+        });
+    </script>
+
     <script>
-        // Storage for board items
-        let boardItems = JSON.parse(localStorage.getItem('renovationBoard')) || [];
+        let currentImageFile = null;
 
-        // Initialize board
-        function initBoard() {
-            renderBoard();
-        }
-
-        // Render all board items
-        function renderBoard() {
+        // Render board items
+        function renderBoard(items) {
             const container = document.getElementById('boardContainer');
             
-            if (boardItems.length === 0) {
+            if (items.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">✨</div>
@@ -625,12 +658,12 @@
                 return;
             }
 
-            container.innerHTML = boardItems.map((item, index) => {
+            container.innerHTML = items.map((item, index) => {
                 if (item.type === 'image') {
                     return `
-                        <div class="board-card image-card" style="animation-delay: ${index * 0.1}s">
-                            <button class="delete-btn" onclick="deleteItem(${index})">×</button>
-                            <img src="${item.image}" alt="${item.title}" class="card-image">
+                        <div class="board-card image-card" style="animation-delay: ${index * 0.05}s">
+                            <button class="delete-btn" onclick="deleteItem('${item.id}')">×</button>
+                            <img src="${item.imageUrl}" alt="${item.title}" class="card-image">
                             <div class="card-content">
                                 <h3 class="card-title">${item.title}</h3>
                                 ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
@@ -640,8 +673,8 @@
                     `;
                 } else if (item.type === 'link') {
                     return `
-                        <div class="board-card link-card" style="animation-delay: ${index * 0.1}s" onclick="window.open('${item.url}', '_blank')">
-                            <button class="delete-btn" onclick="event.stopPropagation(); deleteItem(${index})">×</button>
+                        <div class="board-card link-card" style="animation-delay: ${index * 0.05}s" onclick="window.open('${item.url}', '_blank')">
+                            <button class="delete-btn" onclick="event.stopPropagation(); deleteItem('${item.id}')">×</button>
                             <div class="card-content">
                                 <h3 class="card-title">🔗 ${item.title}</h3>
                                 ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
@@ -652,8 +685,8 @@
                     `;
                 } else if (item.type === 'document') {
                     return `
-                        <div class="board-card document-card" style="animation-delay: ${index * 0.1}s" onclick="window.open('${item.link}', '_blank')">
-                            <button class="delete-btn" onclick="event.stopPropagation(); deleteItem(${index})">×</button>
+                        <div class="board-card document-card" style="animation-delay: ${index * 0.05}s" onclick="window.open('${item.link}', '_blank')">
+                            <button class="delete-btn" onclick="event.stopPropagation(); deleteItem('${item.id}')">×</button>
                             <div class="card-content">
                                 <h3 class="card-title">📄 ${item.title}</h3>
                                 ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
@@ -666,10 +699,7 @@
             }).join('');
         }
 
-        // Save to localStorage
-        function saveBoard() {
-            localStorage.setItem('renovationBoard', JSON.stringify(boardItems));
-        }
+        window.renderBoard = renderBoard;
 
         // Modal functions
         function openImageModal() {
@@ -686,14 +716,19 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
-            // Reset forms
             const form = document.getElementById(modalId).querySelector('form');
             if (form) form.reset();
             if (modalId === 'imageModal') {
                 document.getElementById('imagePreview').style.display = 'none';
                 document.getElementById('imagePreview').src = '';
+                currentImageFile = null;
             }
         }
+
+        window.openImageModal = openImageModal;
+        window.openLinkModal = openLinkModal;
+        window.openDocumentModal = openDocumentModal;
+        window.closeModal = closeModal;
 
         // Image upload handling
         const imageUploadArea = document.getElementById('imageUploadArea');
@@ -728,6 +763,7 @@
         });
 
         function handleImageFile(file) {
+            currentImageFile = file;
             const reader = new FileReader();
             reader.onload = (e) => {
                 imagePreview.src = e.target.result;
@@ -737,37 +773,44 @@
         }
 
         // Form submissions
-        document.getElementById('imageForm').addEventListener('submit', (e) => {
+        document.getElementById('imageForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const imageSrc = imagePreview.src;
-            const title = document.getElementById('imageTitle').value;
             
-            if (!imageSrc || !imageSrc.startsWith('data:image')) {
+            if (!currentImageFile) {
                 alert('Please upload an image first');
                 return;
             }
 
+            const title = document.getElementById('imageTitle').value;
             if (!title) {
                 alert('Please add a title');
                 return;
             }
 
-            boardItems.push({
-                type: 'image',
-                image: imageSrc,
-                title: title,
-                description: document.getElementById('imageDescription').value,
-                tags: document.getElementById('imageTags').value
-            });
+            try {
+                // Upload image to Firebase Storage
+                const storageRef = window.ref(window.storage, `images/${Date.now()}_${currentImageFile.name}`);
+                await window.uploadBytes(storageRef, currentImageFile);
+                const imageUrl = await window.getDownloadURL(storageRef);
 
-            saveBoard();
-            renderBoard();
-            closeModal('imageModal');
-            e.target.reset();
-            imagePreview.style.display = 'none';
+                // Add to Firestore
+                await window.addDoc(window.collection(window.db, 'boardItems'), {
+                    type: 'image',
+                    imageUrl: imageUrl,
+                    title: title,
+                    description: document.getElementById('imageDescription').value,
+                    tags: document.getElementById('imageTags').value,
+                    createdAt: new Date()
+                });
+
+                closeModal('imageModal');
+            } catch (error) {
+                console.error('Error adding image:', error);
+                alert('Error uploading image. Please try again.');
+            }
         });
 
-        document.getElementById('linkForm').addEventListener('submit', (e) => {
+        document.getElementById('linkForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const title = document.getElementById('linkTitle').value;
@@ -778,21 +821,24 @@
                 return;
             }
 
-            boardItems.push({
-                type: 'link',
-                title: title,
-                url: url,
-                description: document.getElementById('linkDescription').value,
-                tags: document.getElementById('linkTags').value
-            });
+            try {
+                await window.addDoc(window.collection(window.db, 'boardItems'), {
+                    type: 'link',
+                    title: title,
+                    url: url,
+                    description: document.getElementById('linkDescription').value,
+                    tags: document.getElementById('linkTags').value,
+                    createdAt: new Date()
+                });
 
-            saveBoard();
-            renderBoard();
-            closeModal('linkModal');
-            e.target.reset();
+                closeModal('linkModal');
+            } catch (error) {
+                console.error('Error adding link:', error);
+                alert('Error adding link. Please try again.');
+            }
         });
 
-        document.getElementById('documentForm').addEventListener('submit', (e) => {
+        document.getElementById('documentForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const title = document.getElementById('docTitle').value;
@@ -803,45 +849,53 @@
                 return;
             }
 
-            boardItems.push({
-                type: 'document',
-                title: title,
-                link: link,
-                description: document.getElementById('docDescription').value,
-                tags: document.getElementById('docTags').value
-            });
+            try {
+                await window.addDoc(window.collection(window.db, 'boardItems'), {
+                    type: 'document',
+                    title: title,
+                    link: link,
+                    description: document.getElementById('docDescription').value,
+                    tags: document.getElementById('docTags').value,
+                    createdAt: new Date()
+                });
 
-            saveBoard();
-            renderBoard();
-            closeModal('documentModal');
-            e.target.reset();
+                closeModal('documentModal');
+            } catch (error) {
+                console.error('Error adding document:', error);
+                alert('Error adding document. Please try again.');
+            }
         });
 
         // Delete item
-        function deleteItem(index) {
+        async function deleteItem(itemId) {
             if (confirm('Remove this item from your board?')) {
-                boardItems.splice(index, 1);
-                saveBoard();
-                renderBoard();
+                try {
+                    await window.deleteDoc(window.doc(window.db, 'boardItems', itemId));
+                } catch (error) {
+                    console.error('Error deleting item:', error);
+                    alert('Error deleting item. Please try again.');
+                }
             }
         }
 
+        window.deleteItem = deleteItem;
+
         // Clear board
         function clearBoard() {
-            if (confirm('Are you sure you want to clear the entire board? This cannot be undone.')) {
-                boardItems = [];
-                saveBoard();
-                renderBoard();
-            }
+            alert('To clear all items, please delete them individually for safety.');
         }
+
+        window.clearBoard = clearBoard;
 
         // Share board
         function shareBoard() {
             const url = window.location.href;
             navigator.clipboard.writeText(url).then(() => {
-                alert('Link copied! Share this URL with your team. Note: Images are stored locally, so they will need to add their own content or you can host this file on a shared server.');
+                alert('Link copied! Share this URL with your team and they will see the same board in real-time!');
             });
         }
+
+        window.shareBoard = shareBoard;
 
         // Close modal on background click
         document.querySelectorAll('.modal').forEach(modal => {
@@ -851,9 +905,6 @@
                 }
             });
         });
-
-        // Initialize on load
-        initBoard();
     </script>
 </body>
 </html>
