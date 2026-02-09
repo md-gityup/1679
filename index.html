@@ -776,7 +776,10 @@
         document.getElementById('imageForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!currentImageFile) {
+            const imagePreview = document.getElementById('imagePreview');
+            const imageSrc = imagePreview.src;
+            
+            if (!imageSrc || !imageSrc.startsWith('data:image')) {
                 alert('Please upload an image first');
                 return;
             }
@@ -788,15 +791,10 @@
             }
 
             try {
-                // Upload image to Firebase Storage
-                const storageRef = window.ref(window.storage, `images/${Date.now()}_${currentImageFile.name}`);
-                await window.uploadBytes(storageRef, currentImageFile);
-                const imageUrl = await window.getDownloadURL(storageRef);
-
-                // Add to Firestore
+                // Store image as base64 in Firestore
                 await window.addDoc(window.collection(window.db, 'boardItems'), {
                     type: 'image',
-                    imageUrl: imageUrl,
+                    imageUrl: imageSrc,
                     title: title,
                     description: document.getElementById('imageDescription').value,
                     tags: document.getElementById('imageTags').value,
