@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1679</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #151520;
+            --bg-card: #1a1a28;
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0b8;
+            --accent-blue: #5b7fff;
+            --accent-purple: #8b5cf6;
+            --accent-pink: #ec4899;
+            --border: rgba(255, 255, 255, 0.08);
+            --glow: rgba(91, 127, 255, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(91, 127, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 4rem;
+            animation: fadeInDown 0.8s ease-out;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.75rem;
+            letter-spacing: -2px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+
+        .toolbar {
+            max-width: 1600px;
+            margin: 0 auto 3rem auto;
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            animation: fadeIn 1s ease-out 0.3s both;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-primary);
+        }
+
+        .btn-primary {
+            background: transparent;
+            border: 1px solid var(--accent-blue);
+            color: var(--text-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .btn-primary:hover::before {
+            opacity: 0.1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-purple);
+            box-shadow: 0 8px 24px rgba(91, 127, 255, 0.2);
+        }
+
+        .btn-primary span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+
+        .board-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.5rem;
+            animation: fadeIn 1s ease-out 0.5s both;
+            position: relative;
+            z-index: 1;
+        }
+
+        .board-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            cursor: pointer;
+            animation: slideUp 0.6s ease-out both;
+            backdrop-filter: blur(10px);
+        }
+
+        .board-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 16px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(91, 127, 255, 0.3), rgba(139, 92, 246, 0.3));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .board-card:hover::before {
+            opacity: 1;
+        }
+
+        .board-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .board-card.image-card .card-image {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .board-card.link-card {
+            background: linear-gradient(135deg, rgba(91, 127, 255, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+            border: 1px solid rgba(91, 127, 255, 0.3);
+        }
+
+        .board-card.document-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .card-description {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .tag {
+            padding: 0.35rem 0.75rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .card-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .card-link:hover {
+            color: var(--accent-purple);
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 10;
+            color: var(--text-primary);
+        }
+
+        .board-card:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.8);
+            border-color: #ef4444;
+            transform: scale(1.1);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 2.5rem;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.4s ease-out;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .form-input,
+        .form-textarea {
+            width: 100%;
+            padding: 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-primary);
+        }
+
+        .form-input::placeholder,
+        .form-textarea::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 0 3px rgba(91, 127, 255, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .file-upload-area {
+            border: 2px dashed var(--border);
+            padding: 3rem;
+            text-align: center;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .file-upload-area:hover,
+        .file-upload-area.drag-over {
+            border-color: var(--accent-blue);
+            background: rgba(91, 127, 255, 0.05);
+        }
+
+        .file-upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            filter: grayscale(1) opacity(0.5);
+        }
+
+        .file-upload-area p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+        }
+
+        #imagePreview {
+            max-width: 100%;
+            margin-top: 1rem;
+            border-radius: 12px;
+            display: none;
+            border: 1px solid var(--border);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-state-text {
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .board-container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .toolbar {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>1679</h1>
+    </div>
+
+    <div class="toolbar">
+        <button class="btn btn-primary" onclick="openImageModal()"><span>📸 Add Image</span></button>
+        <button class="btn btn-primary" onclick="openLinkModal()"><span>🔗 Add Link</span></button>
+        <button class="btn btn-primary" onclick="openDocumentModal()"><span>📄 Add Document</span></button>
+        <button class="btn btn-secondary" onclick="clearBoard()">🗑️ Clear All</button>
+        <button class="btn btn-secondary" onclick="shareBoard()">📤 Share Board</button>
+    </div>
+
+    <div class="board-container" id="boardContainer">
+        <div class="empty-state">
+            <div class="empty-state-icon">✨</div>
+            <p class="empty-state-text">Start building your vision board by adding images, links, and documents</p>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal" id="imageModal">
+        <div class="modal-content">
+            <h2 class="modal-title">Add Image</h2>
+            <form id="imageForm">
+                <div class="form-group">
+                    <label class="form-label">Upload Image</label>
+                    <div class="file-upload-area" id="imageUploadArea">
+                        <div class="file-upload-icon">🖼️</div>
+                        <p>Click or drag image here</p>
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                    </div>
+                    <img id="imagePreview" alt="Preview">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-input" id="imageTitle" placeholder="e.g., Kitchen Inspiration" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" id="imageDescription" placeholder="Describe this image..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tags (comma separated)</label>
+                    <input type="text" class="form-input" id="imageTags" placeholder="e.g., kitchen, modern, white">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('imageModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add to Board</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Link Modal -->
+    <div class="modal" id="linkModal">
+        <div class="modal-content">
+            <h2 class="modal-title">Add Link</h2>
+            <form id="linkForm">
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-input" id="linkTitle" placeholder="e.g., Pinterest Board" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">URL</label>
+                    <input type="url" class="form-input" id="linkUrl" placeholder="https://..." required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" id="linkDescription" placeholder="What is this link for?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tags (comma separated)</label>
+                    <input type="text" class="form-input" id="linkTags" placeholder="e.g., inspiration, pinterest">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('linkModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add to Board</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Document Modal -->
+    <div class="modal" id="documentModal">
+        <div class="modal-content">
+            <h2 class="modal-title">Add Document</h2>
+            <form id="documentForm">
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-input" id="docTitle" placeholder="e.g., Floor Plan PDF" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Document Link or Path</label>
+                    <input type="text" class="form-input" id="docLink" placeholder="Link to Google Drive, Dropbox, etc." required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" id="docDescription" placeholder="What's in this document?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tags (comma separated)</label>
+                    <input type="text" class="form-input" id="docTags" placeholder="e.g., floorplan, technical">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('documentModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add to Board</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Storage for board items
+        let boardItems = JSON.parse(localStorage.getItem('renovationBoard')) || [];
+
+        // Initialize board
+        function initBoard() {
+            renderBoard();
+        }
+
+        // Render all board items
+        function renderBoard() {
+            const container = document.getElementById('boardContainer');
+            
+            if (boardItems.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✨</div>
+                        <p class="empty-state-text">Start building your vision board by adding images, links, and documents</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = boardItems.map((item, index) => {
+                if (item.type === 'image') {
+                    return `
+                        <div class="board-card image-card" style="animation-delay: ${index * 0.1}s">
+                            <button class="delete-btn" onclick="deleteItem(${index})">×</button>
+                            <img src="${item.image}" alt="${item.title}" class="card-image">
+                            <div class="card-content">
+                                <h3 class="card-title">${item.title}</h3>
+                                ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
+                                ${item.tags ? `<div class="card-tags">${item.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else if (item.type === 'link') {
+                    return `
+                        <div class="board-card link-card" style="animation-delay: ${index * 0.1}s" onclick="window.open('${item.url}', '_blank')">
+                            <button class="delete-btn" onclick="event.stopPropagation(); deleteItem(${index})">×</button>
+                            <div class="card-content">
+                                <h3 class="card-title">🔗 ${item.title}</h3>
+                                ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
+                                <a href="${item.url}" class="card-link" target="_blank" onclick="event.stopPropagation()">Visit Link →</a>
+                                ${item.tags ? `<div class="card-tags">${item.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else if (item.type === 'document') {
+                    return `
+                        <div class="board-card document-card" style="animation-delay: ${index * 0.1}s" onclick="window.open('${item.link}', '_blank')">
+                            <button class="delete-btn" onclick="event.stopPropagation(); deleteItem(${index})">×</button>
+                            <div class="card-content">
+                                <h3 class="card-title">📄 ${item.title}</h3>
+                                ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
+                                <a href="${item.link}" class="card-link" target="_blank" onclick="event.stopPropagation()">Open Document →</a>
+                                ${item.tags ? `<div class="card-tags">${item.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+        }
+
+        // Save to localStorage
+        function saveBoard() {
+            localStorage.setItem('renovationBoard', JSON.stringify(boardItems));
+        }
+
+        // Modal functions
+        function openImageModal() {
+            document.getElementById('imageModal').classList.add('active');
+        }
+
+        function openLinkModal() {
+            document.getElementById('linkModal').classList.add('active');
+        }
+
+        function openDocumentModal() {
+            document.getElementById('documentModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            // Reset forms
+            const form = document.getElementById(modalId).querySelector('form');
+            if (form) form.reset();
+            if (modalId === 'imageModal') {
+                document.getElementById('imagePreview').style.display = 'none';
+                document.getElementById('imagePreview').src = '';
+            }
+        }
+
+        // Image upload handling
+        const imageUploadArea = document.getElementById('imageUploadArea');
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+
+        imageUploadArea.addEventListener('click', () => imageInput.click());
+
+        imageUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageUploadArea.classList.add('drag-over');
+        });
+
+        imageUploadArea.addEventListener('dragleave', () => {
+            imageUploadArea.classList.remove('drag-over');
+        });
+
+        imageUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageUploadArea.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleImageFile(file);
+            }
+        });
+
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleImageFile(file);
+            }
+        });
+
+        function handleImageFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Form submissions
+        document.getElementById('imageForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const imageSrc = imagePreview.src;
+            const title = document.getElementById('imageTitle').value;
+            
+            if (!imageSrc || !imageSrc.startsWith('data:image')) {
+                alert('Please upload an image first');
+                return;
+            }
+
+            if (!title) {
+                alert('Please add a title');
+                return;
+            }
+
+            boardItems.push({
+                type: 'image',
+                image: imageSrc,
+                title: title,
+                description: document.getElementById('imageDescription').value,
+                tags: document.getElementById('imageTags').value
+            });
+
+            saveBoard();
+            renderBoard();
+            closeModal('imageModal');
+            e.target.reset();
+            imagePreview.style.display = 'none';
+        });
+
+        document.getElementById('linkForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const title = document.getElementById('linkTitle').value;
+            const url = document.getElementById('linkUrl').value;
+
+            if (!title || !url) {
+                alert('Please fill in title and URL');
+                return;
+            }
+
+            boardItems.push({
+                type: 'link',
+                title: title,
+                url: url,
+                description: document.getElementById('linkDescription').value,
+                tags: document.getElementById('linkTags').value
+            });
+
+            saveBoard();
+            renderBoard();
+            closeModal('linkModal');
+            e.target.reset();
+        });
+
+        document.getElementById('documentForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const title = document.getElementById('docTitle').value;
+            const link = document.getElementById('docLink').value;
+
+            if (!title || !link) {
+                alert('Please fill in title and document link');
+                return;
+            }
+
+            boardItems.push({
+                type: 'document',
+                title: title,
+                link: link,
+                description: document.getElementById('docDescription').value,
+                tags: document.getElementById('docTags').value
+            });
+
+            saveBoard();
+            renderBoard();
+            closeModal('documentModal');
+            e.target.reset();
+        });
+
+        // Delete item
+        function deleteItem(index) {
+            if (confirm('Remove this item from your board?')) {
+                boardItems.splice(index, 1);
+                saveBoard();
+                renderBoard();
+            }
+        }
+
+        // Clear board
+        function clearBoard() {
+            if (confirm('Are you sure you want to clear the entire board? This cannot be undone.')) {
+                boardItems = [];
+                saveBoard();
+                renderBoard();
+            }
+        }
+
+        // Share board
+        function shareBoard() {
+            const url = window.location.href;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Link copied! Share this URL with your team. Note: Images are stored locally, so they will need to add their own content or you can host this file on a shared server.');
+            });
+        }
+
+        // Close modal on background click
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal(modal.id);
+                }
+            });
+        });
+
+        // Initialize on load
+        initBoard();
+    </script>
+</body>
+</html>
