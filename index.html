@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="version" content="v1.5-IMAGES-TO-STORAGE">
+    <meta name="version" content="v1.6-DRAG-DROP">
     <title>1679</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -159,7 +159,7 @@
             overflow: hidden;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
-            cursor: pointer;
+            cursor: move;
             animation: slideUp 0.6s ease-out both;
             backdrop-filter: blur(10px);
         }
@@ -606,9 +606,9 @@
 
     <!-- Firebase SDK -->
     <script type="module">
-        // Version: 1.4 - Re-added Storage for document uploads
+        // Version: 1.6 - Added drag-and-drop reordering
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
-        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
         import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-storage.js';
 
         // Firebase configuration
@@ -626,7 +626,7 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
 
-        console.log('Firebase initialized successfully (v1.4 - with Storage)');
+        console.log('Firebase initialized successfully (v1.6 - with drag-drop)');
 
         // Make functions globally available
         window.db = db;
@@ -634,6 +634,7 @@
         window.collection = collection;
         window.addDoc = addDoc;
         window.deleteDoc = deleteDoc;
+        window.updateDoc = updateDoc;
         window.doc = doc;
         window.ref = ref;
         window.uploadBytes = uploadBytes;
@@ -642,7 +643,7 @@
 
         // Real-time listener for board items with error handling
         try {
-            const q = query(collection(db, 'boardItems'), orderBy('createdAt', 'desc'));
+            const q = query(collection(db, 'boardItems'), orderBy('order', 'asc'));
             onSnapshot(q, (snapshot) => {
                 console.log('Received snapshot with', snapshot.size, 'items');
                 const items = [];
@@ -683,44 +684,140 @@
             }
 
             container.innerHTML = items.map((item, index) => {
+                const baseCard = `
+                    <div class="board-card ${item.type}-card" 
+                         style="animation-delay: ${index * 0.05}s" 
+                         draggable="true" 
+                         data-id="${item.id}"
+                         data-index="${index}">
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteItem('${item.id}')">×</button>
+                `;
+                
                 if (item.type === 'image') {
-                    return `
-                        <div class="board-card image-card" style="animation-delay: ${index * 0.05}s">
-                            <button class="delete-btn" onclick="deleteItem('${item.id}')">×</button>
-                            <img src="${item.imageUrl}" alt="${item.title}" class="card-image">
-                            <div class="card-content">
-                                <h3 class="card-title">${item.title}</h3>
-                                ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
-                                ${item.tags ? `<div class="card-tags">${item.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
-                            </div>
+                    return baseCard + `
+                        <img src="${item.imageUrl}" alt="${item.title}" class="card-image">
+                        <div class="card-content">
+                            <h3 class="card-title">${item.title}</h3>
+                            ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
+                            ${item.tags ? `<div class="card-tags">${item.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
                         </div>
+                    </div>
                     `;
                 } else if (item.type === 'link') {
-                    return `
-                        <div class="board-card link-card" style="animation-delay: ${index * 0.05}s" onclick="window.open('${item.url}', '_blank')">
-                            <button class="delete-btn" onclick="event.stopPropagation(); deleteItem('${item.id}')">×</button>
-                            <div class="card-content">
-                                <h3 class="card-title">🔗 ${item.title}</h3>
-                                ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
-                                <a href="${item.url}" class="card-link" target="_blank" onclick="event.stopPropagation()">Visit Link →</a>
-                                ${item.tags ? `<div class="card-tags">${item.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
-                            </div>
+                    return baseCard + `
+                        <div class="card-content" onclick="window.open('${item.url}', '_blank')">
+                            <h3 class="card-title">🔗 ${item.title}</h3>
+                            ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
+                            <a href="${item.url}" class="card-link" target="_blank" onclick="event.stopPropagation()">Visit Link →</a>
+                            ${item.tags ? `<div class="card-tags">${item.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
                         </div>
+                    </div>
                     `;
                 } else if (item.type === 'document') {
-                    return `
-                        <div class="board-card document-card" style="animation-delay: ${index * 0.05}s" onclick="window.open('${item.link}', '_blank')">
-                            <button class="delete-btn" onclick="event.stopPropagation(); deleteItem('${item.id}')">×</button>
-                            <div class="card-content">
-                                <h3 class="card-title">📄 ${item.title}</h3>
-                                ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
-                                <a href="${item.link}" class="card-link" target="_blank" onclick="event.stopPropagation()">Open Document →</a>
-                                ${item.tags ? `<div class="card-tags">${item.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
-                            </div>
+                    return baseCard + `
+                        <div class="card-content" onclick="window.open('${item.link}', '_blank')">
+                            <h3 class="card-title">📄 ${item.title}</h3>
+                            ${item.description ? `<p class="card-description">${item.description}</p>` : ''}
+                            <a href="${item.link}" class="card-link" target="_blank" onclick="event.stopPropagation()">Open Document →</a>
+                            ${item.tags ? `<div class="card-tags">${item.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
                         </div>
+                    </div>
                     `;
                 }
             }).join('');
+
+            // Add drag and drop event listeners
+            setupDragAndDrop();
+        }
+
+        // Drag and drop functionality
+        let draggedElement = null;
+        let draggedIndex = null;
+
+        function setupDragAndDrop() {
+            const cards = document.querySelectorAll('.board-card');
+            
+            cards.forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('drop', handleDrop);
+                card.addEventListener('dragenter', handleDragEnter);
+                card.addEventListener('dragleave', handleDragLeave);
+                card.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            draggedIndex = parseInt(this.dataset.index);
+            this.style.opacity = '0.4';
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            if (this !== draggedElement) {
+                this.style.transform = 'scale(0.95)';
+            }
+        }
+
+        function handleDragLeave(e) {
+            this.style.transform = '';
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            if (draggedElement !== this) {
+                const dropIndex = parseInt(this.dataset.index);
+                reorderItems(draggedIndex, dropIndex);
+            }
+
+            this.style.transform = '';
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.style.opacity = '1';
+            
+            const cards = document.querySelectorAll('.board-card');
+            cards.forEach(card => {
+                card.style.transform = '';
+            });
+        }
+
+        async function reorderItems(fromIndex, toIndex) {
+            // Get current items from the board
+            const items = Array.from(document.querySelectorAll('.board-card')).map(card => card.dataset.id);
+            
+            // Reorder the array
+            const [movedItem] = items.splice(fromIndex, 1);
+            items.splice(toIndex, 0, movedItem);
+
+            // Update order in Firestore for each item
+            try {
+                const batch = [];
+                for (let i = 0; i < items.length; i++) {
+                    batch.push(
+                        window.updateDoc(window.doc(window.db, 'boardItems', items[i]), {
+                            order: i
+                        })
+                    );
+                }
+                await Promise.all(batch);
+                console.log('Order updated successfully');
+            } catch (error) {
+                console.error('Error updating order:', error);
+            }
         }
 
         window.renderBoard = renderBoard;
@@ -871,6 +968,7 @@
                     title: title,
                     description: document.getElementById('imageDescription').value,
                     tags: document.getElementById('imageTags').value,
+                    order: Date.now(),
                     createdAt: new Date()
                 });
                 
@@ -911,6 +1009,7 @@
                     url: url,
                     description: document.getElementById('linkDescription').value,
                     tags: document.getElementById('linkTags').value,
+                    order: Date.now(),
                     createdAt: new Date()
                 });
 
@@ -963,6 +1062,7 @@
                     fileName: fileName,
                     description: document.getElementById('docDescription').value,
                     tags: document.getElementById('docTags').value,
+                    order: Date.now(),
                     createdAt: new Date()
                 });
 
