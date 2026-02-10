@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="version" content="v1.3-FIXED-PROJECT-ID">
+    <meta name="version" content="v1.4-DOC-UPLOAD">
     <title>1679</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -274,20 +274,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            opacity: 0;
             transition: all 0.3s ease;
             z-index: 10;
             color: var(--text-primary);
-        }
-
-        .board-card:hover .delete-btn {
-            opacity: 1;
+            opacity: 0.7;
         }
 
         .delete-btn:hover {
             background: rgba(239, 68, 68, 0.8);
             border-color: #ef4444;
             transform: scale(1.1);
+            opacity: 1;
         }
 
         /* Modal Styles */
@@ -576,12 +573,20 @@
             <h2 class="modal-title">Add Document</h2>
             <form id="documentForm">
                 <div class="form-group">
-                    <label class="form-label">Title</label>
-                    <input type="text" class="form-input" id="docTitle" placeholder="e.g., Floor Plan PDF" required>
+                    <label class="form-label">Upload File (PDF, Word, Excel, etc.)</label>
+                    <div class="file-upload-area" id="docUploadArea">
+                        <div class="file-upload-icon">📄</div>
+                        <p id="docUploadText">Click or drag file here</p>
+                        <input type="file" id="docInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" style="display: none;">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Document Link or Path</label>
-                    <input type="text" class="form-input" id="docLink" placeholder="Link to Google Drive, Dropbox, etc." required>
+                    <label class="form-label">OR paste a link</label>
+                    <input type="text" class="form-input" id="docLink" placeholder="https://drive.google.com/... (optional)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-input" id="docTitle" placeholder="e.g., Floor Plan PDF" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Description</label>
@@ -601,9 +606,10 @@
 
     <!-- Firebase SDK -->
     <script type="module">
-        // Version: 1.2 - Removed offline persistence for better cloud sync
+        // Version: 1.4 - Re-added Storage for document uploads
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
         import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
+        import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-storage.js';
 
         // Firebase configuration
         const firebaseConfig = {
@@ -618,15 +624,20 @@
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const storage = getStorage(app);
 
-        console.log('Firebase initialized successfully (v1.2 - no offline persistence)');
+        console.log('Firebase initialized successfully (v1.4 - with Storage)');
 
         // Make functions globally available
         window.db = db;
+        window.storage = storage;
         window.collection = collection;
         window.addDoc = addDoc;
         window.deleteDoc = deleteDoc;
         window.doc = doc;
+        window.ref = ref;
+        window.uploadBytes = uploadBytes;
+        window.getDownloadURL = getDownloadURL;
         window.firebaseInitialized = true;
 
         // Real-time listener for board items with error handling
@@ -785,6 +796,44 @@
             reader.readAsDataURL(file);
         }
 
+        // Document upload handling
+        let currentDocFile = null;
+        const docUploadArea = document.getElementById('docUploadArea');
+        const docInput = document.getElementById('docInput');
+        const docUploadText = document.getElementById('docUploadText');
+
+        docUploadArea.addEventListener('click', () => docInput.click());
+
+        docUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            docUploadArea.classList.add('drag-over');
+        });
+
+        docUploadArea.addEventListener('dragleave', () => {
+            docUploadArea.classList.remove('drag-over');
+        });
+
+        docUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            docUploadArea.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                handleDocFile(file);
+            }
+        });
+
+        docInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleDocFile(file);
+            }
+        });
+
+        function handleDocFile(file) {
+            currentDocFile = file;
+            docUploadText.textContent = `Selected: ${file.name}`;
+        }
+
         // Form submissions
         document.getElementById('imageForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -868,28 +917,59 @@
         document.getElementById('documentForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const title = document.getElementById('docTitle').value;
-            const link = document.getElementById('docLink').value;
+            if (!window.firebaseInitialized) {
+                alert('Firebase is still initializing. Please wait a moment and try again.');
+                return;
+            }
 
-            if (!title || !link) {
-                alert('Please fill in title and document link');
+            const title = document.getElementById('docTitle').value;
+            const linkUrl = document.getElementById('docLink').value;
+
+            if (!currentDocFile && !linkUrl) {
+                alert('Please either upload a file or provide a link');
+                return;
+            }
+
+            if (!title) {
+                alert('Please add a title');
                 return;
             }
 
             try {
+                let finalLink = linkUrl;
+                let fileName = '';
+
+                // If file was uploaded, upload to Firebase Storage
+                if (currentDocFile) {
+                    console.log('Uploading document to Firebase Storage...');
+                    const storageRef = window.ref(window.storage, `documents/${Date.now()}_${currentDocFile.name}`);
+                    await window.uploadBytes(storageRef, currentDocFile);
+                    finalLink = await window.getDownloadURL(storageRef);
+                    fileName = currentDocFile.name;
+                    console.log('Document uploaded successfully');
+                }
+
                 await window.addDoc(window.collection(window.db, 'boardItems'), {
                     type: 'document',
                     title: title,
-                    link: link,
+                    link: finalLink,
+                    fileName: fileName,
                     description: document.getElementById('docDescription').value,
                     tags: document.getElementById('docTags').value,
                     createdAt: new Date()
                 });
 
-                closeModal('documentModal');
+                // Close modal and reset
+                const modal = document.getElementById('documentModal');
+                modal.classList.remove('active');
+                e.target.reset();
+                currentDocFile = null;
+                docUploadText.textContent = 'Click or drag file here';
+
+                console.log('Document added successfully');
             } catch (error) {
                 console.error('Error adding document:', error);
-                alert('Error adding document. Please try again.');
+                alert('Error adding document: ' + error.message);
             }
         });
 
