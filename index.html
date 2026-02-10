@@ -601,8 +601,7 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-        import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, connectFirestoreEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         // Firebase configuration
         const firebaseConfig = {
@@ -617,28 +616,39 @@
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app);
+
+        console.log('Firebase initialized successfully');
 
         // Make functions globally available
         window.db = db;
-        window.storage = storage;
         window.collection = collection;
         window.addDoc = addDoc;
         window.deleteDoc = deleteDoc;
         window.doc = doc;
-        window.ref = ref;
-        window.uploadBytes = uploadBytes;
-        window.getDownloadURL = getDownloadURL;
+        window.firebaseInitialized = true;
 
-        // Real-time listener for board items
-        const q = query(collection(db, 'boardItems'), orderBy('createdAt', 'desc'));
-        onSnapshot(q, (snapshot) => {
-            const items = [];
-            snapshot.forEach((doc) => {
-                items.push({ id: doc.id, ...doc.data() });
+        // Real-time listener for board items with error handling
+        try {
+            const q = query(collection(db, 'boardItems'), orderBy('createdAt', 'desc'));
+            onSnapshot(q, (snapshot) => {
+                console.log('Received snapshot with', snapshot.size, 'items');
+                const items = [];
+                snapshot.forEach((doc) => {
+                    items.push({ id: doc.id, ...doc.data() });
+                });
+                window.renderBoard(items);
+            }, (error) => {
+                console.error('Firestore listener error:', error);
+                document.getElementById('boardContainer').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <p class="empty-state-text">Connection error. Check console for details.</p>
+                    </div>
+                `;
             });
-            window.renderBoard(items);
-        });
+        } catch (error) {
+            console.error('Error setting up Firestore listener:', error);
+        }
     </script>
 
     <script>
@@ -776,6 +786,11 @@
         document.getElementById('imageForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            if (!window.firebaseInitialized) {
+                alert('Firebase is still initializing. Please wait a moment and try again.');
+                return;
+            }
+
             const imagePreview = document.getElementById('imagePreview');
             const imageSrc = imagePreview.src;
             
@@ -791,8 +806,8 @@
             }
 
             try {
-                // Store image as base64 in Firestore
-                await window.addDoc(window.collection(window.db, 'boardItems'), {
+                console.log('Attempting to add image to Firestore...');
+                const docRef = await window.addDoc(window.collection(window.db, 'boardItems'), {
                     type: 'image',
                     imageUrl: imageSrc,
                     title: title,
@@ -800,11 +815,11 @@
                     tags: document.getElementById('imageTags').value,
                     createdAt: new Date()
                 });
-
+                console.log('Image added successfully with ID:', docRef.id);
                 closeModal('imageModal');
             } catch (error) {
                 console.error('Error adding image:', error);
-                alert('Error uploading image. Please try again.');
+                alert('Error uploading image: ' + error.message);
             }
         });
 
