@@ -829,7 +829,18 @@
                     createdAt: new Date()
                 });
                 console.log('Image added successfully with ID:', docRef.id);
-                closeModal('imageModal');
+                
+                // Close modal directly
+                const modal = document.getElementById('imageModal');
+                modal.classList.remove('active');
+                
+                // Reset form
+                e.target.reset();
+                imagePreview.style.display = 'none';
+                imagePreview.src = '';
+                currentImageFile = null;
+                
+                console.log('Modal closed successfully');
             } catch (error) {
                 console.error('Error adding image:', error);
                 alert('Error uploading image: ' + error.message);
