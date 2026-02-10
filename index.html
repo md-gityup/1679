@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="version" content="v1.4-DOC-UPLOAD">
+    <meta name="version" content="v1.5-IMAGES-TO-STORAGE">
     <title>1679</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -843,10 +843,7 @@
                 return;
             }
 
-            const imagePreview = document.getElementById('imagePreview');
-            const imageSrc = imagePreview.src;
-            
-            if (!imageSrc || !imageSrc.startsWith('data:image')) {
+            if (!currentImageFile) {
                 alert('Please upload an image first');
                 return;
             }
@@ -858,15 +855,25 @@
             }
 
             try {
-                console.log('Attempting to add image to Firestore...');
+                console.log('Uploading image to Firebase Storage...');
+                
+                // Upload image to Firebase Storage
+                const storageRef = window.ref(window.storage, `images/${Date.now()}_${currentImageFile.name}`);
+                await window.uploadBytes(storageRef, currentImageFile);
+                const imageUrl = await window.getDownloadURL(storageRef);
+                
+                console.log('Image uploaded, adding to Firestore...');
+
+                // Add to Firestore with Storage URL
                 const docRef = await window.addDoc(window.collection(window.db, 'boardItems'), {
                     type: 'image',
-                    imageUrl: imageSrc,
+                    imageUrl: imageUrl,
                     title: title,
                     description: document.getElementById('imageDescription').value,
                     tags: document.getElementById('imageTags').value,
                     createdAt: new Date()
                 });
+                
                 console.log('Image added successfully with ID:', docRef.id);
                 
                 // Close modal directly
