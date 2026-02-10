@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="version" content="v1.1-20260210">
+    <meta name="version" content="v1.2-20260210-nopersist">
     <title>1679</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -601,9 +601,9 @@
 
     <!-- Firebase SDK -->
     <script type="module">
-        // Version: 1.1 - Force cache refresh
+        // Version: 1.2 - Removed offline persistence for better cloud sync
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
-        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
 
         // Firebase configuration
         const firebaseConfig = {
@@ -619,19 +619,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Enable offline persistence
-        try {
-            await enableIndexedDbPersistence(db);
-            console.log('Offline persistence enabled');
-        } catch (err) {
-            if (err.code === 'failed-precondition') {
-                console.warn('Persistence failed: Multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Persistence not available in this browser');
-            }
-        }
-
-        console.log('Firebase initialized successfully');
+        console.log('Firebase initialized successfully (v1.2 - no offline persistence)');
 
         // Make functions globally available
         window.db = db;
