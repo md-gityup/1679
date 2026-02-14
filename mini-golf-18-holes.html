@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mini Golf - 9 Holes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #gameContainer {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #gameCanvas {
+            background: #2d5016;
+            border: 8px solid #654321;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            touch-action: none;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .playerCard {
+            color: white;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            min-width: 200px;
+        }
+
+        .playerCard.active {
+            background: rgba(74, 222, 128, 0.3);
+            border-color: #4ade80;
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.5);
+        }
+
+        .playerName {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ballIndicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .playerStats {
+            font-size: 14px;
+            display: flex;
+            gap: 15px;
+        }
+
+        #powerMeter {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 3px solid white;
+            border-radius: 15px;
+            overflow: hidden;
+            display: none;
+        }
+
+        #powerFill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4ade80 0%, #fbbf24 50%, #ef4444 100%);
+            transition: width 0.05s linear;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 16px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+
+        #winMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 40px 60px;
+            border-radius: 20px;
+            font-size: 24px;
+            text-align: center;
+            display: none;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+
+        #nextButton {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 18px;
+            background: #4ade80;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            font-weight: bold;
+        }
+
+        #nextButton:active {
+            transform: scale(0.95);
+        }
+
+        #colorSelector {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 40px 50px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        #colorSelector h2 {
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .playerCountSelector {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+
+        .playerCountButton {
+            padding: 20px 30px;
+            font-size: 18px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .playerCountButton:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .playerCountButton.selected {
+            background: #4ade80;
+            border-color: #4ade80;
+            transform: scale(1.1);
+        }
+
+        .playerSetup {
+            margin: 25px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .playerSetup h3 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #4ade80;
+        }
+
+        .colorGrid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .colorOption {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .colorOption:hover {
+            transform: scale(1.1);
+            border-color: white;
+        }
+
+        .colorOption.selected {
+            border-color: #fbbf24;
+            border-width: 5px;
+            transform: scale(1.15);
+        }
+
+        .colorOption::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 30px;
+            color: white;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .colorOption.selected::after {
+            opacity: 1;
+        }
+
+        #startButton {
+            padding: 15px 50px;
+            font-size: 20px;
+            background: #4ade80;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            font-weight: bold;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        #startButton:hover {
+            background: #22c55e;
+        }
+
+        #startButton:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="hud"></div>
+
+        <div id="courseInfo" style="position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.5); padding: 15px; border-radius: 10px; color: white; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);">
+            <div style="font-size: 20px; font-weight: bold; margin-bottom: 5px;">Hole <span id="holeNum">1</span>/18</div>
+            <div>Par: <span id="holePar">3</span></div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="powerMeter">
+            <div id="powerFill"></div>
+        </div>
+
+        <div id="instructions">
+            Drag to aim, release to shoot! | Press Q to quit | R to restart hole
+        </div>
+
+        <div id="winMessage">
+            <div id="messageText"></div>
+            <button id="nextButton">Play Again</button>
+        </div>
+
+        <div id="colorSelector">
+            <h2>⛳ Mini Golf - 18 Holes</h2>
+            
+            <h3 style="margin-bottom: 15px;">How many players?</h3>
+            <div class="playerCountSelector">
+                <button class="playerCountButton selected" data-players="1">1 Player</button>
+                <button class="playerCountButton" data-players="2">2 Players</button>
+                <button class="playerCountButton" data-players="3">3 Players</button>
+                <button class="playerCountButton" data-players="4">4 Players</button>
+            </div>
+
+            <div id="playerColorSetup">
+                <div class="playerSetup" id="player1Setup">
+                    <h3>Player 1 - Choose Color</h3>
+                    <div class="colorGrid" data-player="0"></div>
+                </div>
+                <div class="playerSetup" id="player2Setup" style="display: none;">
+                    <h3>Player 2 - Choose Color</h3>
+                    <div class="colorGrid" data-player="1"></div>
+                </div>
+                <div class="playerSetup" id="player3Setup" style="display: none;">
+                    <h3>Player 3 - Choose Color</h3>
+                    <div class="colorGrid" data-player="2"></div>
+                </div>
+                <div class="playerSetup" id="player4Setup" style="display: none;">
+                    <h3>Player 4 - Choose Color</h3>
+                    <div class="colorGrid" data-player="3"></div>
+                </div>
+            </div>
+
+            <button id="startButton">Start Game</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const CANVAS_WIDTH = Math.min(window.innerWidth - 40, 600);
+        const CANVAS_HEIGHT = Math.min(window.innerHeight * 0.8, 800);
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        const MARGIN = 40;
+        const BALL_RADIUS = 8;
+        const HOLE_RADIUS = 15;
+        const BASE_FRICTION = 0.985;
+
+        const ballColors = {
+            white: { light: '#ffffff', mid: '#f0f0f0', dark: '#d0d0d0', darker: '#b0b0b0' },
+            red: { light: '#ff6b6b', mid: '#ef4444', dark: '#dc2626', darker: '#b91c1c' },
+            blue: { light: '#60a5fa', mid: '#3b82f6', dark: '#2563eb', darker: '#1d4ed8' },
+            green: { light: '#4ade80', mid: '#22c55e', dark: '#16a34a', darker: '#15803d' },
+            yellow: { light: '#fde047', mid: '#fbbf24', dark: '#f59e0b', darker: '#d97706' },
+            orange: { light: '#fdba74', mid: '#fb923c', dark: '#f97316', darker: '#ea580c' },
+            purple: { light: '#c084fc', mid: '#a855f7', dark: '#9333ea', darker: '#7e22ce' },
+            pink: { light: '#f9a8d4', mid: '#ec4899', dark: '#db2777', darker: '#be185d' },
+            black: { light: '#737373', mid: '#525252', dark: '#404040', darker: '#262626' },
+            gold: { light: '#ffd700', mid: '#f4c430', dark: '#daa520', darker: '#b8860b' },
+            silver: { light: '#e8e8e8', mid: '#c0c0c0', dark: '#a8a8a8', darker: '#909090' },
+            teal: { light: '#5eead4', mid: '#14b8a6', dark: '#0d9488', darker: '#0f766e' }
+        };
+
+        let currentHole = 1;
+        let currentPlayer = 0;
+        let numPlayers = 1;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let dragEnd = { x: 0, y: 0 };
+        let holes = [];
+
+        // Player data array
+        let players = [
+            { name: 'Player 1', color: 'white', strokes: 0, totalStrokes: 0, x: 0, y: 0, vx: 0, vy: 0, isMoving: false, inHole: false, holeProgress: 0, spin: 0, trail: [] },
+            { name: 'Player 2', color: 'red', strokes: 0, totalStrokes: 0, x: 0, y: 0, vx: 0, vy: 0, isMoving: false, inHole: false, holeProgress: 0, spin: 0, trail: [] },
+            { name: 'Player 3', color: 'blue', strokes: 0, totalStrokes: 0, x: 0, y: 0, vx: 0, vy: 0, isMoving: false, inHole: false, holeProgress: 0, spin: 0, trail: [] },
+            { name: 'Player 4', color: 'green', strokes: 0, totalStrokes: 0, x: 0, y: 0, vx: 0, vy: 0, isMoving: false, inHole: false, holeProgress: 0, spin: 0, trail: [] }
+        ];
+
+        // Keep old ball reference for backward compatibility
+        const ball = players[0];
+
+        class Obstacle {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+            }
+
+            contains(px, py) {
+                return px >= this.x && px <= this.x + this.width &&
+                       py >= this.y && py <= this.y + this.height;
+            }
+
+            checkCollision(ball) {
+                const closestX = Math.max(this.x, Math.min(ball.x, this.x + this.width));
+                const closestY = Math.max(this.y, Math.min(ball.y, this.y + this.height));
+                
+                const distX = ball.x - closestX;
+                const distY = ball.y - closestY;
+                const distance = Math.sqrt(distX * distX + distY * distY);
+                
+                if (distance < ball.radius) {
+                    if (ball.x < this.x || ball.x > this.x + this.width) {
+                        ball.vx = -ball.vx * 0.8;
+                    }
+                    if (ball.y < this.y || ball.y > this.y + this.height) {
+                        ball.vy = -ball.vy * 0.8;
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            draw() {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.strokeStyle = '#654321';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        class CircleObstacle {
+            constructor(x, y, radius) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+            }
+
+            contains(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                return Math.sqrt(dx * dx + dy * dy) <= this.radius;
+            }
+
+            checkCollision(ball) {
+                const dx = ball.x - this.x;
+                const dy = ball.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < ball.radius + this.radius) {
+                    const angle = Math.atan2(dy, dx);
+                    const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+                    ball.vx = Math.cos(angle) * speed * 0.75;
+                    ball.vy = Math.sin(angle) * speed * 0.75;
+                    
+                    ball.x = this.x + Math.cos(angle) * (this.radius + ball.radius + 1);
+                    ball.y = this.y + Math.sin(angle) * (this.radius + ball.radius + 1);
+                    return true;
+                }
+                return false;
+            }
+
+            draw() {
+                const gradient = ctx.createRadialGradient(
+                    this.x - this.radius * 0.3, 
+                    this.y - this.radius * 0.3, 
+                    0,
+                    this.x, 
+                    this.y, 
+                    this.radius
+                );
+                gradient.addColorStop(0, '#9ca3af');
+                gradient.addColorStop(0.7, '#6b7280');
+                gradient.addColorStop(1, '#4b5563');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class SandTrap {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.type = 'sand';
+            }
+
+            contains(px, py) {
+                return px >= this.x && px <= this.x + this.width &&
+                       py >= this.y && py <= this.y + this.height;
+            }
+
+            checkCollision(ball) {
+                // Sand doesn't block - just slows down
+                return false;
+            }
+
+            isInSand(ball) {
+                return ball.x >= this.x && ball.x <= this.x + this.width &&
+                       ball.y >= this.y && ball.y <= this.y + this.height;
+            }
+
+            draw() {
+                // Sand gradient
+                const gradient = ctx.createRadialGradient(
+                    this.x + this.width/2, this.y + this.height/2, 0,
+                    this.x + this.width/2, this.y + this.height/2, Math.max(this.width, this.height)/2
+                );
+                gradient.addColorStop(0, '#fbbf24');
+                gradient.addColorStop(1, '#d97706');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // Sand texture
+                ctx.fillStyle = 'rgba(217, 119, 6, 0.3)';
+                for (let i = 0; i < 30; i++) {
+                    ctx.fillRect(
+                        this.x + Math.random() * this.width,
+                        this.y + Math.random() * this.height,
+                        2, 2
+                    );
+                }
+                
+                // Border
+                ctx.strokeStyle = '#b45309';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        function generateHoles() {
+            holes = [];
+            const random = (min, max) => Math.random() * (max - min) + min;
+            
+            for (let i = 0; i < 18; i++) {
+                // Front 9: Holes 1-9
+                // Back 9: Holes 10-18 (harder)
+                let par, numObstacles;
+                
+                if (i < 6) {
+                    // Holes 1-6: Par 3 (easier)
+                    par = 3;
+                    numObstacles = Math.floor(random(2, 4));
+                } else if (i < 12) {
+                    // Holes 7-12: Par 4 (medium)
+                    par = 4;
+                    numObstacles = Math.floor(random(3, 5));
+                } else {
+                    // Holes 13-18: Par 5 (challenging)
+                    par = 5;
+                    numObstacles = Math.floor(random(4, 7));
+                }
+                
+                const startX = random(MARGIN + 50, CANVAS_WIDTH / 3);
+                const startY = random(MARGIN + 50, CANVAS_HEIGHT - MARGIN - 50);
+                
+                const holeX = random(CANVAS_WIDTH * 2/3, CANVAS_WIDTH - MARGIN - 50);
+                const holeY = random(MARGIN + 50, CANVAS_HEIGHT - MARGIN - 50);
+                
+                const obstacles = [];
+                
+                for (let j = 0; j < numObstacles; j++) {
+                    const types = ['rect', 'circle', 'sand'];
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    let obstacle;
+                    let attempts = 0;
+                    
+                    do {
+                        if (type === 'rect') {
+                            const w = random(40, 100);
+                            const h = random(40, 100);
+                            const x = random(MARGIN + 80, CANVAS_WIDTH - MARGIN - 80 - w);
+                            const y = random(MARGIN + 50, CANVAS_HEIGHT - MARGIN - 50 - h);
+                            obstacle = new Obstacle(x, y, w, h);
+                        } else if (type === 'circle') {
+                            const r = random(25, 50);
+                            const x = random(MARGIN + 80 + r, CANVAS_WIDTH - MARGIN - 80 - r);
+                            const y = random(MARGIN + 50 + r, CANVAS_HEIGHT - MARGIN - 50 - r);
+                            obstacle = new CircleObstacle(x, y, r);
+                        } else if (type === 'sand') {
+                            const w = random(60, 120);
+                            const h = random(60, 120);
+                            const x = random(MARGIN + 80, CANVAS_WIDTH - MARGIN - 80 - w);
+                            const y = random(MARGIN + 50, CANVAS_HEIGHT - MARGIN - 50 - h);
+                            obstacle = new SandTrap(x, y, w, h);
+                        }
+                        attempts++;
+                    } while ((obstacle.contains(startX, startY) || obstacle.contains(holeX, holeY)) && attempts < 20);
+                    
+                    if (attempts < 20) {
+                        obstacles.push(obstacle);
+                    }
+                }
+                
+                holes.push({
+                    par: par,
+                    start: { x: startX, y: startY },
+                    hole: { x: holeX, y: holeY, radius: HOLE_RADIUS },
+                    obstacles: obstacles
+                });
+            }
+        }
+
+        function initHole() {
+            const hole = holes[currentHole - 1];
+            
+            // Initialize all active players
+            for (let i = 0; i < numPlayers; i++) {
+                const player = players[i];
+                player.x = hole.start.x + (i * 20) - (numPlayers * 10);
+                player.y = hole.start.y;
+                player.vx = 0;
+                player.vy = 0;
+                player.isMoving = false;
+                player.inHole = false;
+                player.holeProgress = 0;
+                player.spin = 0;
+                player.trail = [];
+                player.strokes = 0;
+            }
+            
+            currentPlayer = 0;
+            updateHUD();
+        }
+
+        function updateHUD() {
+            const hudDiv = document.getElementById('hud');
+            hudDiv.innerHTML = '';
+            
+            // Create player cards for all active players
+            for (let i = 0; i < numPlayers; i++) {
+                const player = players[i];
+                const colors = ballColors[player.color];
+                
+                const card = document.createElement('div');
+                card.className = 'playerCard' + (i === currentPlayer ? ' active' : '');
+                
+                card.innerHTML = `
+                    <div class="playerName">
+                        <span class="ballIndicator" style="background: ${colors.mid};"></span>
+                        ${player.name}
+                    </div>
+                    <div class="playerStats">
+                        <span>Hole: ${player.strokes}</span>
+                        <span>Total: ${player.totalStrokes}</span>
+                    </div>
+                `;
+                
+                hudDiv.appendChild(card);
+            }
+            
+            document.getElementById('holeNum').textContent = currentHole;
+            document.getElementById('holePar').textContent = holes[currentHole - 1].par;
+        }
+
+        function drawGrass() {
+            const gradient = ctx.createRadialGradient(
+                CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 0,
+                CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, Math.max(CANVAS_WIDTH, CANVAS_HEIGHT)
+            );
+            gradient.addColorStop(0, '#3a6b20');
+            gradient.addColorStop(0.5, '#2d5016');
+            gradient.addColorStop(1, '#1f3a0f');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            
+            const grassColors = ['#1a3d0a', '#1f4510', '#153308'];
+            for (let i = 0; i < 150; i++) {
+                const x = Math.random() * CANVAS_WIDTH;
+                const y = Math.random() * CANVAS_HEIGHT;
+                const length = 2 + Math.random() * 3;
+                
+                ctx.strokeStyle = grassColors[Math.floor(Math.random() * grassColors.length)];
+                ctx.lineWidth = 0.5 + Math.random();
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x, y - length);
+                ctx.stroke();
+            }
+        }
+
+        function drawBorders() {
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 12;
+            ctx.strokeRect(MARGIN, MARGIN, CANVAS_WIDTH - MARGIN * 2, CANVAS_HEIGHT - MARGIN * 2);
+            
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(MARGIN, MARGIN, CANVAS_WIDTH - MARGIN * 2, CANVAS_HEIGHT - MARGIN * 2);
+        }
+
+        function drawHole() {
+            const hole = holes[currentHole - 1].hole;
+            
+            const gradient = ctx.createRadialGradient(
+                hole.x, hole.y, 0,
+                hole.x, hole.y, hole.radius
+            );
+            gradient.addColorStop(0, '#1a1a1a');
+            gradient.addColorStop(0.7, '#000000');
+            gradient.addColorStop(1, '#0a0a0a');
+            
+            ctx.fillStyle = '#e5e5e5';
+            ctx.beginPath();
+            ctx.arc(hole.x, hole.y, hole.radius + 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(hole.x, hole.y, hole.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(hole.x, hole.y);
+            ctx.lineTo(hole.x, hole.y - 40);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(hole.x, hole.y - 40);
+            ctx.lineTo(hole.x + 20, hole.y - 30);
+            ctx.lineTo(hole.x, hole.y - 20);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawBall(player) {
+            const colors = ballColors[player.color];
+            
+            if (player.isMoving && player.trail.length > 0) {
+                for (let i = 0; i < player.trail.length; i++) {
+                    const alpha = (i / player.trail.length) * 0.2;
+                    const size = BALL_RADIUS * (0.5 + (i / player.trail.length) * 0.5);
+                    
+                    ctx.fillStyle = `rgba(200, 200, 200, ${alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(player.trail[i].x, player.trail[i].y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            let displayRadius = BALL_RADIUS;
+            let alpha = 1;
+            
+            if (player.inHole) {
+                displayRadius = BALL_RADIUS * (1 - player.holeProgress * 0.8);
+                alpha = 1 - player.holeProgress * 0.5;
+            }
+            
+            if (displayRadius < 0.5) return;
+            
+            ctx.save();
+            ctx.shadowColor = `rgba(0, 0, 0, ${0.4 * alpha})`;
+            ctx.shadowBlur = player.isMoving ? 6 : 4;
+            ctx.shadowOffsetX = 3;
+            ctx.shadowOffsetY = 3;
+            
+            const gradient = ctx.createRadialGradient(
+                player.x - displayRadius * 0.35, 
+                player.y - displayRadius * 0.35, 
+                displayRadius * 0.1,
+                player.x, 
+                player.y, 
+                displayRadius * 1.2
+            );
+            
+            const hexToRgba = (hex, a) => {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${a})`;
+            };
+            
+            gradient.addColorStop(0, hexToRgba(colors.light, alpha));
+            gradient.addColorStop(0.3, hexToRgba(colors.mid, alpha));
+            gradient.addColorStop(0.7, hexToRgba(colors.dark, alpha));
+            gradient.addColorStop(1, hexToRgba(colors.darker, alpha));
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, displayRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+            
+            if (!player.inHole) {
+                ctx.fillStyle = hexToRgba(colors.darker, alpha * 0.4);
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i / 12) * Math.PI * 2 + player.spin;
+                    const dimpleX = player.x + Math.cos(angle) * displayRadius * 0.6;
+                    const dimpleY = player.y + Math.sin(angle) * displayRadius * 0.6;
+                    
+                    ctx.beginPath();
+                    ctx.arc(dimpleX, dimpleY, 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        function drawAimLine() {
+            const player = players[currentPlayer];
+            
+            if (isDragging && !player.isMoving) {
+                const dx = dragEnd.x - player.x;
+                const dy = dragEnd.y - player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 5) {
+                    const angle = Math.atan2(dy, dx);
+                    const lineLength = Math.min(distance, 150);
+                    const power = Math.min(distance / 150, 1);
+                    
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    for (let i = 0; i < 12; i++) {
+                        const t = i / 12;
+                        const dotX = player.x - Math.cos(angle) * lineLength * t;
+                        const dotY = player.y - Math.sin(angle) * lineLength * t;
+                        
+                        ctx.beginPath();
+                        ctx.arc(dotX, dotY, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    document.getElementById('powerMeter').style.display = 'block';
+                    document.getElementById('powerFill').style.width = (power * 100) + '%';
+                }
+            } else {
+                document.getElementById('powerMeter').style.display = 'none';
+            }
+        }
+
+        function checkBorderCollision(player) {
+            if (player.x - BALL_RADIUS < MARGIN) {
+                player.x = MARGIN + BALL_RADIUS;
+                player.vx = Math.abs(player.vx) * 0.8;
+            }
+            if (player.x + BALL_RADIUS > CANVAS_WIDTH - MARGIN) {
+                player.x = CANVAS_WIDTH - MARGIN - BALL_RADIUS;
+                player.vx = -Math.abs(player.vx) * 0.8;
+            }
+            if (player.y - BALL_RADIUS < MARGIN) {
+                player.y = MARGIN + BALL_RADIUS;
+                player.vy = Math.abs(player.vy) * 0.8;
+            }
+            if (player.y + BALL_RADIUS > CANVAS_HEIGHT - MARGIN) {
+                player.y = CANVAS_HEIGHT - MARGIN - BALL_RADIUS;
+                player.vy = -Math.abs(player.vy) * 0.8;
+            }
+        }
+
+        function updateBall(player, playerIndex) {
+            if (player.inHole) {
+                player.holeProgress += 0.05;
+                
+                if (player.holeProgress >= 1 && player.holeProgress < 1.1) {
+                    player.totalStrokes += player.strokes;
+                    player.holeProgress = 1.5;
+                    
+                    // Check if all players finished this hole
+                    const allFinished = players.slice(0, numPlayers).every(p => p.holeProgress >= 1.5);
+                    
+                    if (allFinished) {
+                        // All players done with this hole - advance to next
+                        if (currentHole === 18) {
+                            updateHUD();
+                            showFinalScores();
+                        } else {
+                            currentHole++;
+                            
+                            // Show halfway message after hole 9
+                            if (currentHole === 10) {
+                                const frontNinePar = holes.slice(0, 9).reduce((sum, h) => sum + h.par, 0);
+                                let message = '⛳ Front 9 Complete!\n\n';
+                                for (let i = 0; i < numPlayers; i++) {
+                                    const p = players[i];
+                                    const score = p.totalStrokes - frontNinePar;
+                                    const scoreText = score < 0 ? `${Math.abs(score)} Under` : 
+                                                    score === 0 ? 'Even' : 
+                                                    `${score} Over`;
+                                    message += `${p.name}: ${p.totalStrokes} (${scoreText})\n`;
+                                }
+                                message += '\nStarting Back 9...';
+                                alert(message);
+                            }
+                            
+                            initHole();
+                        }
+                    } else {
+                        // Not all players finished - switch to next player who hasn't finished
+                        if (playerIndex === currentPlayer) {
+                            let nextPlayer = (currentPlayer + 1) % numPlayers;
+                            let attempts = 0;
+                            
+                            while (players[nextPlayer].inHole && attempts < numPlayers) {
+                                nextPlayer = (nextPlayer + 1) % numPlayers;
+                                attempts++;
+                            }
+                            
+                            if (!players[nextPlayer].inHole) {
+                                currentPlayer = nextPlayer;
+                                updateHUD();
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+            
+            if (!player.isMoving) return;
+            
+            if (Math.abs(player.vx) > 0.5 || Math.abs(player.vy) > 0.5) {
+                player.trail.push({ x: player.x, y: player.y });
+                if (player.trail.length > 8) player.trail.shift();
+            } else {
+                player.trail = [];
+            }
+            
+            const speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+            player.spin += speed * 0.1;
+            
+            player.x += player.vx;
+            player.y += player.vy;
+            
+            checkBorderCollision(player);
+            
+            const hole = holes[currentHole - 1];
+            
+            // Check sand traps - apply extra friction
+            let inSand = false;
+            for (let obstacle of hole.obstacles) {
+                if (obstacle.type === 'sand' && obstacle.isInSand(player)) {
+                    inSand = true;
+                    break;
+                }
+            }
+            
+            // Check regular obstacle collisions
+            for (let obstacle of hole.obstacles) {
+                obstacle.checkCollision(player);
+            }
+            
+            // Apply friction (more in sand)
+            const friction = inSand ? 0.92 : BASE_FRICTION; // Sand slows ball significantly
+            player.vx *= friction;
+            player.vy *= friction;
+            
+            if (Math.abs(player.vx) < 0.15 && Math.abs(player.vy) < 0.15) {
+                player.vx = 0;
+                player.vy = 0;
+                player.isMoving = false;
+                player.trail = [];
+                
+                // Check if ball went in hole
+                checkWin(player);
+                
+                // ONLY switch turns if this is current player AND ball did NOT go in hole
+                if (playerIndex === currentPlayer && !player.inHole) {
+                    // Switch to next player who hasn't finished
+                    let nextPlayer = (currentPlayer + 1) % numPlayers;
+                    let attempts = 0;
+                    
+                    while (players[nextPlayer].inHole && attempts < numPlayers) {
+                        nextPlayer = (nextPlayer + 1) % numPlayers;
+                        attempts++;
+                    }
+                    
+                    if (!players[nextPlayer].inHole) {
+                        currentPlayer = nextPlayer;
+                        updateHUD();
+                    }
+                }
+            } else {
+                checkWin(player);
+            }
+        }
+
+        function checkWin(player) {
+            const hole = holes[currentHole - 1].hole;
+            const dx = player.x - hole.x;
+            const dy = player.y - hole.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < hole.radius - BALL_RADIUS / 2) {
+                player.inHole = true;
+                player.isMoving = false;
+                player.vx = 0;
+                player.vy = 0;
+                player.x = hole.x;
+                player.y = hole.y;
+            }
+        }
+
+        function showFinalScores() {
+            const totalPar = holes.reduce((sum, h) => sum + h.par, 0);
+            
+            let message = '<h2>🏆 18 Holes Complete!</h2><br>';
+            message += `<div style="margin: 20px 0; font-size: 18px;">`;
+            
+            // Sort players by score
+            const sortedPlayers = players.slice(0, numPlayers).sort((a, b) => a.totalStrokes - b.totalStrokes);
+            
+            sortedPlayers.forEach((player, index) => {
+                const score = player.totalStrokes - totalPar;
+                const scoreText = score < 0 ? `${Math.abs(score)} Under Par! 🏆` : 
+                                score === 0 ? 'Even Par! 👏' : 
+                                `${score} Over Par 💪`;
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                
+                message += `<div style="margin: 15px 0; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px;">`;
+                message += `${medal} <strong>${player.name}</strong><br>`;
+                message += `Score: ${player.totalStrokes} (${scoreText})`;
+                message += `</div>`;
+            });
+            
+            message += `</div><div style="margin-top: 15px; font-size: 16px; opacity: 0.8;">Par: ${totalPar}</div>`;
+            
+            showWinMessage(message, true);
+        }
+
+        function showWinMessage(message, gameComplete) {
+            if (!gameComplete) return;
+            
+            const winMessage = document.getElementById('winMessage');
+            const messageText = document.getElementById('messageText');
+            
+            messageText.innerHTML = message;
+            winMessage.style.display = 'block';
+        }
+
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches ? e.touches[0] : e;
+            return {
+                x: (touch.clientX - rect.left) * (CANVAS_WIDTH / rect.width),
+                y: (touch.clientY - rect.top) * (CANVAS_HEIGHT / rect.height)
+            };
+        }
+
+        function handleStart(e) {
+            const player = players[currentPlayer];
+            if (player.inHole) return;
+            e.preventDefault();
+            
+            if (player.isMoving) {
+                const speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+                if (speed < 0.5) {
+                    player.isMoving = false;
+                    player.vx = 0;
+                    player.vy = 0;
+                } else {
+                    return;
+                }
+            }
+            
+            const coords = getCanvasCoords(e);
+            const dx = coords.x - player.x;
+            const dy = coords.y - player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 50) {
+                isDragging = true;
+                dragStart = { x: player.x, y: player.y };
+                dragEnd = coords;
+            }
+        }
+
+        function handleMove(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            dragEnd = getCanvasCoords(e);
+        }
+
+        function handleEnd(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            
+            const player = players[currentPlayer];
+            const dx = dragEnd.x - player.x;
+            const dy = dragEnd.y - player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 5) {
+                const power = Math.min(distance / 100, 1.5);
+                player.vx = -dx * 0.15 * power;
+                player.vy = -dy * 0.15 * power;
+                player.isMoving = true;
+                player.strokes++;
+                updateHUD();
+            }
+            
+            isDragging = false;
+            document.getElementById('powerMeter').style.display = 'none';
+        }
+
+        canvas.addEventListener('touchstart', handleStart, { passive: false });
+        canvas.addEventListener('touchmove', handleMove, { passive: false });
+        canvas.addEventListener('touchend', handleEnd, { passive: false });
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mousemove', handleMove);
+        canvas.addEventListener('mouseup', handleEnd);
+
+        // Keyboard shortcuts
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            
+            if (key === 'q') {
+                e.preventDefault();
+                // Q = Quit to menu
+                const confirmed = confirm('Quit current game and return to menu?');
+                if (confirmed) {
+                    document.getElementById('winMessage').style.display = 'none';
+                    document.getElementById('colorSelector').style.display = 'block';
+                    currentHole = 1;
+                    players.forEach(p => {
+                        p.totalStrokes = 0;
+                        p.strokes = 0;
+                    });
+                }
+            } else if (key === 'r') {
+                e.preventDefault();
+                // R = Restart current hole
+                const confirmed = confirm('Restart current hole?');
+                if (confirmed) {
+                    initHole();
+                }
+            } else if (key === 'escape') {
+                e.preventDefault();
+                // ESC = Pause/Menu
+                const confirmed = confirm('Quit current game and return to menu?');
+                if (confirmed) {
+                    document.getElementById('winMessage').style.display = 'none';
+                    document.getElementById('colorSelector').style.display = 'block';
+                    currentHole = 1;
+                    players.forEach(p => {
+                        p.totalStrokes = 0;
+                        p.strokes = 0;
+                    });
+                }
+            }
+        });
+
+        // Add quit button for mobile/touch devices
+        const quitBtn = document.createElement('button');
+        quitBtn.textContent = 'Quit (Q)';
+        quitBtn.style.cssText = `
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        `;
+        quitBtn.addEventListener('click', () => {
+            const confirmed = confirm('Quit current game and return to menu?');
+            if (confirmed) {
+                document.getElementById('winMessage').style.display = 'none';
+                document.getElementById('colorSelector').style.display = 'block';
+                currentHole = 1;
+                players.forEach(p => {
+                    p.totalStrokes = 0;
+                    p.strokes = 0;
+                });
+            }
+        });
+        document.getElementById('gameContainer').appendChild(quitBtn);
+
+        // Setup player count selector
+        document.querySelectorAll('.playerCountButton').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.playerCountButton').forEach(b => b.classList.remove('selected'));
+                this.classList.add('selected');
+                numPlayers = parseInt(this.getAttribute('data-players'));
+                
+                // Show/hide player setups
+                for (let i = 1; i <= 4; i++) {
+                    const setup = document.getElementById(`player${i}Setup`);
+                    setup.style.display = i <= numPlayers ? 'block' : 'none';
+                }
+            });
+        });
+
+        // Create color options for each player
+        function createColorOptions() {
+            const colorKeys = Object.keys(ballColors);
+            const defaultColors = ['white', 'red', 'blue', 'green'];
+            
+            for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
+                const container = document.querySelector(`.colorGrid[data-player="${playerIndex}"]`);
+                container.innerHTML = '';
+                
+                colorKeys.forEach((colorKey, colorIndex) => {
+                    const colors = ballColors[colorKey];
+                    const option = document.createElement('div');
+                    option.className = 'colorOption';
+                    
+                    // Pre-select default colors for each player
+                    if (colorKey === defaultColors[playerIndex]) {
+                        option.classList.add('selected');
+                    }
+                    
+                    option.setAttribute('data-color', colorKey);
+                    option.style.background = `linear-gradient(135deg, ${colors.light} 0%, ${colors.dark} 100%)`;
+                    
+                    option.addEventListener('click', function() {
+                        container.querySelectorAll('.colorOption').forEach(opt => opt.classList.remove('selected'));
+                        this.classList.add('selected');
+                        players[playerIndex].color = colorKey;
+                    });
+                    
+                    option.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        container.querySelectorAll('.colorOption').forEach(opt => opt.classList.remove('selected'));
+                        this.classList.add('selected');
+                        players[playerIndex].color = colorKey;
+                    });
+                    
+                    container.appendChild(option);
+                });
+            }
+        }
+
+        createColorOptions();
+
+        document.getElementById('startButton').addEventListener('click', () => {
+            document.getElementById('colorSelector').style.display = 'none';
+            generateHoles();
+            initHole();
+        });
+
+        document.getElementById('startButton').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            document.getElementById('colorSelector').style.display = 'none';
+            generateHoles();
+            initHole();
+        });
+
+        document.getElementById('nextButton').addEventListener('click', () => {
+            document.getElementById('winMessage').style.display = 'none';
+            document.getElementById('colorSelector').style.display = 'block';
+            currentHole = 1;
+            players.forEach(p => {
+                p.totalStrokes = 0;
+                p.strokes = 0;
+            });
+        });
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            
+            drawGrass();
+            drawBorders();
+            
+            const hole = holes[currentHole - 1];
+            if (hole) {
+                hole.obstacles.forEach(obs => obs.draw());
+                drawHole();
+            }
+            
+            drawAimLine();
+            
+            // Draw all active players' balls
+            for (let i = 0; i < numPlayers; i++) {
+                if (!players[i].inHole || players[i].holeProgress < 1) {
+                    drawBall(players[i]);
+                }
+            }
+            
+            // Update all active players
+            for (let i = 0; i < numPlayers; i++) {
+                updateBall(players[i], i);
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+        document.getElementById('colorSelector').style.display = 'block';
+    </script>
+</body>
+</html>
